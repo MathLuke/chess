@@ -1,3 +1,5 @@
+use std::fmt;
+
 enum Piece {
     Pawn,
     Rook,
@@ -51,6 +53,7 @@ impl BitBoard {
                 '1'..='8' => i -= c as u64 - 49,
                 _ => i+= 1,
             }
+            if i == 0 {break;}
             i-= 1;
         }
         bitboard.white_pieces |= bitboard.white_pawns | bitboard.white_rooks | bitboard.white_knights | bitboard.white_bishops | bitboard.white_queens | bitboard.white_kings;
@@ -61,6 +64,7 @@ impl BitBoard {
 }
 
 struct Board {
+    fen:String,
     pieces:BitBoard,
     active_color:String,
     white_castling_rights:(bool, bool),
@@ -72,34 +76,67 @@ struct Board {
 
 impl Board {
     fn new(fen:&str) -> Self {
-        let mut fen_iterator = fen.split(' ');
-        let pieces = BitBoard::new(fen_iterator.next().expect("FEN should have a minimum of 1 tokens, found 0"));
-        let active_color = fen_iterator.next().unwrap_or("w").to_string();
-        let castling_rights_str = fen_iterator.next().unwrap_or("-");
-        let white_castling_rights = (castling_rights_str.contains('K'), castling_rights_str.contains('Q'));
-        let black_castling_rights = (castling_rights_str.contains('k'), castling_rights_str.contains('q'));
-        let en_passant_target = fen_iterator.next().map(|x| square_to_int(x)).flatten();
-        let halfmove_clock= fen_iterator.next().map(|x| x.parse::<u8>().unwrap_or(1)).unwrap_or(1);
-        let fullmove = fen_iterator.next().map(|x| x.parse::<usize>().unwrap_or_default()).unwrap_or_default();
-        Board{pieces, active_color, white_castling_rights, black_castling_rights, en_passant_target, halfmove_clock, fullmove}     
-    }
+        Board::try_from(fen).expect("FEN is formatted improperly")
+    } 
 }
+
 impl Default for Board {
     fn default() -> Self {
         Board::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
 }
 
-fn square_to_int(square:&str) -> Option<u8> {
-    if square.len() != 2 {return None}
+impl TryFrom<&str> for Board {
+    type Error = &'static str;
+    fn try_from(fen: &str) -> Result<Self, Self::Error> {
+        let mut fen_iterator = fen.split(' ');
+        let pieces = BitBoard::new(fen_iterator.next().ok_or("FEN should have a minimum of 1 tokens, found 0")?);
+        let active_color = fen_iterator.next().unwrap_or("w").to_string();
+        let castling_rights_str = fen_iterator.next().unwrap_or("-");
+        let white_castling_rights = (castling_rights_str.contains('K'), castling_rights_str.contains('Q'));
+        let black_castling_rights = (castling_rights_str.contains('k'), castling_rights_str.contains('q'));
+        let en_passant_target = fen_iterator.next().map(|x| square_to_int(x).ok()).flatten();
+        let halfmove_clock= fen_iterator.next().map(|x| x.parse::<u8>().unwrap_or(1)).unwrap_or(1);
+        let fullmove = fen_iterator.next().map(|x| x.parse::<usize>().unwrap_or_default()).unwrap_or_default();
+        Ok(Board{fen:fen.to_string(), pieces, active_color, white_castling_rights, black_castling_rights, en_passant_target, halfmove_clock, fullmove}) //TODO: Better FEN generation
+    }
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut output = "   _ _ _ _ _ _ _ _\n8 ".to_string();
+        let mut rank_num = 7;
+        for c in self.fen.split(' ').next().ok_or(fmt::Error)?.chars() {
+            match c {
+                'p' | 'r' | 'n' | 'b' | 'q' | 'k' | 'P' | 'R' | 'N' | 'B' | 'Q' | 'K' => {
+                    output.push('|');
+                    output.push(c);
+                },
+                '1'..='8' => {
+                    output.push_str(&"|_".repeat(c as usize - 48))
+                },
+                '/' => {
+                    output.push_str(&format!("|\n{} ", rank_num));
+                    rank_num -= 1;
+                }
+                _ => ()
+            }
+        }
+        output.push_str("|\n   a b c d e f g h");
+        write!(f, "{output}\nfen:{}", self.fen)
+    }
+}
+
+fn square_to_int(square:&str) -> Result<u8, ()> { 
+    if square.len() != 2 {return Err(())}
     let mut chars = square.chars();
-    let file = chars.next()? as u8; 
-    let rank = chars.next()? as u8;
-    if file < 97 || file > 104 || rank < 49 || rank > 56 {return None}
-    Some(8* (56 - rank) + file - 97) 
+    let file = chars.next().ok_or(())? as u8; 
+    let rank = chars.next().ok_or(())? as u8;
+    if file < 97 || file > 104 || rank < 49 || rank > 56 {return Err(())}
+    Ok(8* (56 - rank) + file - 97) 
 }
 
 fn main() {
-    println!("{}", square_to_int("a8").unwrap());
-    println!("{}", square_to_int("h1").unwrap());
+    let board = Board::default();
+    println!("{}", board);
 }
