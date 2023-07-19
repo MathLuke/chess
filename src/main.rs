@@ -32,24 +32,38 @@ struct BitBoard {
 
 impl BitBoard {
     fn new (fen:&str) -> Self {
+        BitBoard::try_from(fen).expect("Invalid FEN provided")
+    } 
+
+    fn get_partial_fen (&self) -> String {
+        for i in 63..=0 {
+            
+        }
+        "".to_string()
+    }
+}
+
+impl TryFrom<&str> for BitBoard {
+    type Error = &'static str;
+    fn try_from(fen: &str) -> Result<Self, Self::Error> {
         let mut bitboard = BitBoard{..Default::default()};
         let fen_iterator = fen.chars();
         let mut i = 63;
         for c in fen_iterator {
             match c {
-                'p' => bitboard.black_pawns += 2^i,
-                'r' => bitboard.black_rooks += 2^i,
-                'n' => bitboard.black_knights += 2^i, 
-                'b' => bitboard.black_bishops += 2^i, 
-                'q' => bitboard.black_queens += 2^i, 
-                'k' => bitboard.black_kings += 2^i, 
+                'p' => bitboard.black_pawns += 1<<i,
+                'r' => bitboard.black_rooks += 1<<i,
+                'n' => bitboard.black_knights += 1<<i, 
+                'b' => bitboard.black_bishops += 1<<i, 
+                'q' => bitboard.black_queens += 1<<i, 
+                'k' => bitboard.black_kings += 1<<i, 
                 
-                'P' => bitboard.white_pawns += 2^i,
-                'R' => bitboard.white_rooks += 2^i,
-                'N' => bitboard.white_knights += 2^i, 
-                'B' => bitboard.white_bishops += 2^i, 
-                'Q' => bitboard.white_queens += 2^i, 
-                'K' => bitboard.white_kings += 2^i, 
+                'P' => bitboard.white_pawns += 1<<i,
+                'R' => bitboard.white_rooks += 1<<i,
+                'N' => bitboard.white_knights += 1<<i, 
+                'B' => bitboard.white_bishops += 1<<i, 
+                'Q' => bitboard.white_queens += 1<<i, 
+                'K' => bitboard.white_kings += 1<<i, 
                 '1'..='8' => i -= c as u64 - 49,
                 _ => i+= 1,
             }
@@ -59,7 +73,10 @@ impl BitBoard {
         bitboard.white_pieces |= bitboard.white_pawns | bitboard.white_rooks | bitboard.white_knights | bitboard.white_bishops | bitboard.white_queens | bitboard.white_kings;
         bitboard.black_pieces |= bitboard.black_pawns | bitboard.black_rooks | bitboard.black_knights | bitboard.black_bishops | bitboard.black_queens | bitboard.black_kings;
         bitboard.all_pieces = bitboard.white_pieces | bitboard.black_pieces;
-        bitboard
+        if bitboard.all_pieces == 0 {return Err("Empty BitBoard was constructed based on input FEN")}
+        if bitboard.white_kings.count_ones() != 1 || bitboard.black_kings.count_ones() != 1 {return Err("FEN must contain 1 king of each color")}
+        
+        Ok(bitboard)
     }
 }
 
@@ -72,6 +89,29 @@ struct Board {
     en_passant_target:Option<u8>,
     halfmove_clock:u8,
     fullmove:usize
+}
+
+impl fmt::Debug for BitBoard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut output:String = String::new();
+        output.push_str(&format!("all_pieces:    {:0>64b}\n\n", self.all_pieces));
+        output.push_str(&format!("white_pieces:  {:0>64b}\n", self.white_pieces));
+        output.push_str(&format!("white_pawns:   {:0>64b}\n", self.white_pawns));
+        output.push_str(&format!("white_rooks:   {:0>64b}\n", self.white_rooks));
+        output.push_str(&format!("white_knights: {:0>64b}\n", self.white_knights));
+        output.push_str(&format!("white_bishops: {:0>64b}\n", self.white_bishops));
+        output.push_str(&format!("white_queens:  {:0>64b}\n", self.white_queens));
+        output.push_str(&format!("white_kings:   {:0>64b}\n\n", self.white_kings));
+
+        output.push_str(&format!("black_pieces:  {:0>64b}\n", self.black_pieces));
+        output.push_str(&format!("black_pawns:   {:0>64b}\n", self.black_pawns));
+        output.push_str(&format!("black_rooks:   {:0>64b}\n", self.black_rooks));
+        output.push_str(&format!("black_knights: {:0>64b}\n", self.black_knights));
+        output.push_str(&format!("black_bishops: {:0>64b}\n", self.black_bishops));
+        output.push_str(&format!("black_queens:  {:0>64b}\n", self.black_queens));
+        output.push_str(&format!("black_kings:   {:0>64b}\n", self.black_kings));
+        write!(f, "{output}")
+    } 
 }
 
 impl Board {
@@ -138,5 +178,6 @@ fn square_to_int(square:&str) -> Result<u8, ()> {
 
 fn main() {
     let board = Board::default();
-    println!("{}", board);
+    println!("{}\n\n", board);
+    println!("{:?}", board.pieces);
 }
