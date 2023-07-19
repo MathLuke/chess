@@ -36,10 +36,43 @@ impl BitBoard {
     } 
 
     fn get_partial_fen (&self) -> String {
-        for i in 63..=0 {
-            
+        let mut output = String::new();
+        let mut empty_counter:u8 = 0;
+        for i in (0..=63).rev() {
+            if 1<<i & self.white_pieces != 0 {
+                if empty_counter != 0 {
+                    output.push((empty_counter + 48) as char);
+                    empty_counter = 0;
+                }
+                if 1<<i & self.white_pawns != 0 {output.push('P');}
+                else if 1<<i & self.white_rooks != 0 {output.push('R');}
+                else if 1<<i & self.white_knights != 0 {output.push('N');}
+                else if 1<<i & self.white_bishops != 0 {output.push('B');}
+                else if 1<<i & self.white_queens != 0 {output.push('Q');}
+                else if 1<<i & self.white_kings != 0 {output.push('K');}
+            } else if 1<<i & self.black_pieces != 0 {
+                if empty_counter != 0 {
+                    output.push((empty_counter + 48) as char);
+                    empty_counter = 0;
+                }
+                if 1<<i & self.black_pawns != 0 {output.push('p');}
+                else if 1<<i & self.black_rooks != 0 {output.push('r');}
+                else if 1<<i & self.black_knights != 0 {output.push('n');}
+                else if 1<<i & self.black_bishops != 0 {output.push('b');}
+                else if 1<<i & self.black_queens != 0 {output.push('q');}
+                else if 1<<i & self.black_kings != 0 {output.push('k');}
+            } else {
+                empty_counter += 1;
+            }
+            if i > 0 && i % 8 == 0 {
+                if empty_counter != 0 {
+                    output.push((empty_counter + 48) as char);
+                    empty_counter = 0;
+                }
+                output.push('/');
+            }
         }
-        "".to_string()
+        output
     }
 }
 
@@ -75,7 +108,9 @@ impl TryFrom<&str> for BitBoard {
         bitboard.all_pieces = bitboard.white_pieces | bitboard.black_pieces;
         if bitboard.all_pieces == 0 {return Err("Empty BitBoard was constructed based on input FEN")}
         if bitboard.white_kings.count_ones() != 1 || bitboard.black_kings.count_ones() != 1 {return Err("FEN must contain 1 king of each color")}
-        
+        if bitboard.white_pawns & bitboard.white_rooks & bitboard.white_knights & bitboard.white_bishops & bitboard.white_queens & bitboard.white_kings & bitboard.black_pawns & bitboard.black_rooks & bitboard.black_knights & bitboard.black_bishops & bitboard.black_queens & bitboard.black_kings != 0 {
+            return Err("Piece collision detected. If you see this, let a developer know.");
+        }
         Ok(bitboard)
     }
 }
@@ -180,4 +215,5 @@ fn main() {
     let board = Board::default();
     println!("{}\n\n", board);
     println!("{:?}", board.pieces);
+    println!("{}", board.pieces.get_partial_fen());
 }
