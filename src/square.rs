@@ -1,6 +1,7 @@
 use crate::bitboard::Bitboard;
 
-pub struct Square(u8);
+#[derive(Clone, Copy)]
+pub struct Square(pub(crate) u8);
 
 impl Square {
     pub fn new(index:u8) -> Self {
@@ -8,6 +9,6 @@ impl Square {
     }
 
     pub fn into_bitmap(&self) -> Bitboard {
-        return Bitboard::new((1 << self.0) as u64);
+        return Bitboard::new((1u64 << self.0) as u64);
     }
 }
