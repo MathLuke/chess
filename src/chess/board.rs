@@ -1,5 +1,11 @@
-use super::{bitboard::BitBoard, movement};
 use std::fmt;
+use super::{
+    Move,
+    BitBoard,
+    CastlingRights,
+    Square,
+    Player,
+};
 
 pub struct Board {
     fen:String,
@@ -7,38 +13,14 @@ pub struct Board {
     active_color:Player,
     white_castling_rights:CastlingRights,
     black_castling_rights:CastlingRights,
-    en_passant_target:Option<u8>,
+    en_passant_target:Option<Square>,
     halfmove_clock:u8,
     fullmove:usize
 }
 
-pub enum Player {
-    White,
-    Black
-}
-
-pub struct CastlingRights {
-    kingside:bool,
-    queenside:bool,
-}
-
-impl CastlingRights {
-    fn get_castling_rights(s:&str, player:Player) -> Self {
-        match player {
-            Player::White => {
-                CastlingRights{
-                    kingside:s.contains("K"),
-                    queenside:s.contains("Q")
-                }
-            },
-            Player::Black => {
-                CastlingRights {
-                    kingside:s.contains("k"),
-                    queenside:s.contains("q")
-                }
-            }
-        }
-    }
+pub enum BoardParseError {
+    LengthError,
+    InvalidFENError,
 }
 
 impl Board {
@@ -46,8 +28,22 @@ impl Board {
         Board::try_from(fen).expect("FEN is formatted improperly")
     } 
 
-    pub fn make_move(m:movement::Move) {
+    pub fn make_move(&mut self, m:Move) {
+        match m {
+            Move::Normal { from, to } => {
+                todo!()
+            }
+            _ => (),
+        }
+        if let Player::Black = self.active_color {
+            self.fullmove += 1;
+        }
+        self.halfmove_clock += 1;
+    }
 
+    pub fn get_legal_moves(&self) -> Vec<Move> {
+        let mut legal_moves = Vec::new();
+        legal_moves
     }
 }
 
@@ -69,7 +65,7 @@ impl TryFrom<&str> for Board {
         let castling_rights_str = fen_iterator.next().unwrap_or("-");
         let white_castling_rights = CastlingRights::get_castling_rights(castling_rights_str, Player::White);
         let black_castling_rights = CastlingRights::get_castling_rights(castling_rights_str, Player::Black);
-        let en_passant_target = fen_iterator.next().map(|x| square_to_int(x).ok()).flatten();
+        let en_passant_target = fen_iterator.next().map(|x| Square::try_from(x).ok()).flatten();
         let halfmove_clock= fen_iterator.next().map(|x| x.parse::<u8>().unwrap_or(1)).unwrap_or(1);
         let fullmove = fen_iterator.next().map(|x| x.parse::<usize>().unwrap_or_default()).unwrap_or_default();
         // let fen = format!("{} {} {} {} {} {}", pieces.get_partial_fen(), active_color, castling_rights_str, en_passant_target, halfmove_clock, fullmove);
@@ -101,18 +97,3 @@ impl fmt::Display for Board {
         write!(f, "{output}\nfen:{}", self.fen)
     }
 }
-
-fn square_to_int(square:&str) -> Result<u8, ()> { 
-    if square.len() != 2 {return Err(())}
-    let mut chars = square.chars();
-    let file = chars.next().ok_or(())? as u8; 
-    let rank = chars.next().ok_or(())? as u8;
-    if file < 97 || file > 104 || rank < 49 || rank > 56 {return Err(())}
-    Ok(8* (56 - rank) + file - 97) 
-}
-
-fn int_to_square(square:u8) -> Result<String, ()> {
-    if square > 63 {return Err(())}
-    Ok(format!("{}{}", (104 -square % 8) as char, (49 + square / 8) as char))
-}
-

@@ -1,19 +1,7 @@
-pub mod chess {
-    pub mod board;
-    pub mod bitboard;
-    pub mod movement;
-}
-
-use chess::board::Board;
-
-enum Piece {
-    Pawn,
-    Rook,
-    Knight,
-    Bishop,
-    Queen,
-    King
-}
+mod chess;
+use chess::{
+    Board,
+};
 
 fn main() {
     let board = Board::default();

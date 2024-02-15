@@ -21,6 +21,12 @@ pub struct BitBoard {
     black_kings:u64,
 }
 
+pub enum BitBoardParseError {
+    EmptyBoardError,
+    KingError,
+    PieceCollisionError,
+}
+
 impl BitBoard {
     pub fn new (fen:&str) -> Self {
         BitBoard::try_from(fen).expect("Invalid FEN provided")
@@ -110,6 +116,7 @@ impl fmt::Debug for BitBoard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut output:String = String::new();
         output.push_str(&format!("all_pieces:    {:0>64b}\n\n", self.all_pieces));
+
         output.push_str(&format!("white_pieces:  {:0>64b}\n", self.white_pieces));
         output.push_str(&format!("white_pawns:   {:0>64b}\n", self.white_pawns));
         output.push_str(&format!("white_rooks:   {:0>64b}\n", self.white_rooks));
