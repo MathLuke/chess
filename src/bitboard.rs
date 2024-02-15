@@ -20,9 +20,9 @@ impl Bitboard {
 
 impl fmt::Debug for Bitboard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let bytes = self.0.to_le_bytes();
-        bytes.iter().map(
-            );
-        todo!();
+        for byte in self.0.to_le_bytes().iter().rev() {
+            write!(f, "{:08b}\n", byte.reverse_bits())?;
+        }
+        Ok(())
     }
 }
